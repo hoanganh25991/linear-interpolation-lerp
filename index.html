@@ -13,30 +13,75 @@
       myCanvas.width=window.innerWidth;
       myCanvas.height=window.innerHeight;
 
-      const ctx=myCanvas.getContext("2d");
       const A={x:100,y:300};
       const B={x:400,y:100};
-      
+
+      const orange={r:230, g:150, b:0};
+      const blue={r:0, g:70, b:160};
+
+      const lowFreq=200;
+      const highFreq=600;
+
+      const ctx=myCanvas.getContext("2d");
+
+      let osc=null;
+      let audioCtx=null;
+      myCanvas.onclick=function(){
+        if(audioCtx==null){
+          audioCtx=new(AudioContext || webkitAudioContext || window.webkitAudioContext)();
+          osc=audioCtx.createOscillator();
+          osc.frequency.value=200;
+          osc.start();
+
+          const node=audioCtx.createGain();
+          node.gain.value=0.1;
+          osc.connect(node);
+          node.connect(audioCtx.destination);
+        }
+      }
+
       animate()
-      
+
       function animate(){
         ctx.clearRect(0,0, myCanvas.width, myCanvas.height)
+
+        // Apply lerp & sin(x)
         const sec=new Date().getTime()/1000;
         const t=sec-Math. floor (sec) ;
         const C=vLerp(A,B,t);
         drawDot(C,"");
-      
         drawDot(A,"A");
         drawDot(B,"B");
         
+        // Apply to color
+        const {r,g,b}=vLerp(orange,blue,t);
+        myCanvas.style.backgroundColor= `rgb(${r},${g},${b})`;
+
+        // Apply to sound
+        if(osc){
+          osc.frequency.value=lerp(lowFreq,highFreq,t);
+        }
+
+        // Apply to text
+        ctx.strokeStyle="white";
+        ctx.textAlign="center";
+        ctx.textBaseline="top";
+        ctx.font="bold 40px Arial";
+        ctx.setLineDash ([lerp(0,130,t),130]);
+        ctx.strokeText("click for sound",myCanvas.width/2,10);
+        ctx.fillStyle="rgb(255,255,255,0.2)"
+        ctx.fillText("click for sound",myCanvas.width/2,10);
+        ctx.setLineDash([]); // reset
+
         requestAnimationFrame(animate);
       }
 
-      function vLerp(A,B, t){
-        return {
-          x: lerp(A.x,B.x,t),
-          y: lerp(A.y,B.y,t)
+      function vLerp(A,B,t){
+        const res={};
+        for(const attr in A){
+          res[attr]=lerp(A[attr],B[attr],t);
         }
+        return res;
       }
 
       function lerp(a,b,t){
